@@ -1392,44 +1392,26 @@ public:
                                               ids[i], &info, &sz) == noErr)
                     {
                         String paramName;
+                        String clumpName;
 
                         if (info.flags & kAudioUnitParameterFlag_HasClump) {
 
+                            AudioUnitParameterNameInfo clumpNameInfo ;
                             AudioUnitParameterID parameterID = ids[i] ;
                             UInt32 clumpID = info.clumpID;
-
-                            UInt32 dataSize = sizeof(CFStringRef);
-                            CFStringRef clumpName = NULL;
+                            UInt32 dataSize = sizeof(clumpNameInfo) ;
+                            clumpNameInfo.inID = clumpID ;
+                            clumpNameInfo.inDesiredLength = 0 ;
                             OSStatus result = AudioUnitGetProperty(audioUnit,
                                                             kAudioUnitProperty_ParameterClumpName,
-                                                            kAudioUnitScope_Global, // Scope might vary based on the Audio Unit
-                                                            clumpID, // The clump ID is passed directly as the parameter ID for this property
-                                                            &clumpName,
+                                                            kAudioUnitScope_Global,
+                                                            0, 
+                                                            &clumpNameInfo,
                                                             &dataSize);
 
-                            if (result == noErr && clumpName != NULL) {
-                                // Use clumpName here, e.g., display it in your UI
-                                // Remember to release the CFStringRef when done
-                                CFRelease(clumpName);
-                            }
-
-                            AudioUnitParameterNameInfo paramNameInfo;
-                            paramNameInfo.inID = parameterID;
-                            paramNameInfo.inDesiredLength = 0; // Use 0 for the default length, or specify a length for the name
-                            paramNameInfo.outName = NULL;
-
-                            dataSize = sizeof(paramNameInfo);
-                            result = AudioUnitGetProperty(audioUnit,
-                                                            kAudioUnitProperty_ParameterIDName,
-                                                            kAudioUnitScope_Global, // Scope might vary based on the Audio Unit
-                                                            0, // The element is often 0, but this might vary based on the Audio Unit
-                                                            &paramNameInfo,
-                                                            &dataSize);
-
-                            if (result == noErr && paramNameInfo.outName != NULL) {
-                                // Use paramNameInfo.outName here, e.g., display it in your UI
-                                // Remember to release the CFStringRef when done
-                                CFRelease(paramNameInfo.outName);
+                            if (result == noErr) {
+                                clumpName = String::fromCFString (clumpNameInfo.outName);
+                                CFRelease(clumpNameInfo.outName);
                             }
                         }
 
@@ -1444,6 +1426,9 @@ public:
                         {
                             paramName = String (info.name, sizeof (info.name));
                         }
+
+                        if(clumpName!="")
+                            paramName = clumpName + " " + paramName ;
 
                         bool isDiscrete = (info.unit == kAudioUnitParameterUnit_Indexed
                                         || info.unit == kAudioUnitParameterUnit_Boolean);
