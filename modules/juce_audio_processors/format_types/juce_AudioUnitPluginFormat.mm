@@ -1731,7 +1731,8 @@ public:
                     if (! info.isValid())
                         continue;
 
-                    const auto paramName = getParamName (info.get());
+                    const auto clumpName = getClumpName(audioUnit,ids[i],info.get());
+                    const auto paramName = clumpName=="" ? getParamName (info.get()) : clumpName + " " + getParamName (info.get());                    
                     const auto label = getParamLabel (info.get());
                     const auto isDiscrete = (info.get().unit == kAudioUnitParameterUnit_Indexed
                                           || info.get().unit == kAudioUnitParameterUnit_Boolean);
@@ -2192,6 +2193,32 @@ private:
             return { info.name, sizeof (info.name) };
 
         return String::fromCFString (info.cfNameString);
+    }
+
+    static String getClumpName(const AudioUnit& audioUnit , const AudioUnitParameterID parameterID,const AudioUnitParameterInfo& info) {
+        String clumpName;
+
+        if (info.flags & kAudioUnitParameterFlag_HasClump) {
+
+            AudioUnitParameterNameInfo clumpNameInfo ;
+            UInt32 clumpID = info.clumpID;
+            UInt32 dataSize = sizeof(clumpNameInfo) ;
+            clumpNameInfo.inID = clumpID ;
+            clumpNameInfo.inDesiredLength = 0 ;
+            OSStatus result = AudioUnitGetProperty(audioUnit,
+                                            kAudioUnitProperty_ParameterClumpName,
+                                            kAudioUnitScope_Global,
+                                            0, 
+                                            &clumpNameInfo,
+                                            &dataSize);
+
+            if (result == noErr) {
+                clumpName = String::fromCFString (clumpNameInfo.outName);
+                CFRelease(clumpNameInfo.outName);
+            }
+        }      
+
+        return clumpName  ;
     }
 
     static String getParamLabel (const AudioUnitParameterInfo& info)
